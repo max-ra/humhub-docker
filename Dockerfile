@@ -40,9 +40,12 @@ RUN apk add --no-cache \
     php7-xmlreader \
     php7-xmlwriter \
     php7-zip \
-    php7-fileinfo
+    php7-fileinfo \
+    php7-tokenizer
 
-RUN composer install --no-ansi --no-dev --no-interaction --no-progress --no-scripts --optimize-autoloader && \
+RUN composer require worteks/humhub-auth-oidc && \
+    composer update && \
+    composer install --no-ansi --no-dev --no-interaction --no-scripts --optimize-autoloader && \
     chmod +x protected/yii && \
     chmod +x protected/yii.bat
 
@@ -91,6 +94,7 @@ RUN apk add --no-cache \
     php7-exif \
     php7-fileinfo \
     php7-session \
+    php7-tokenizer \
     supervisor \
     nginx \
     sqlite \
