@@ -1,6 +1,6 @@
-ARG HUMHUB_VERSION=1.6.0-beta.1
+ARG HUMHUB_VERSION=1.6.2
 
-FROM composer:1.10.9 as builder-composer
+FROM composer:1.10.10 as builder-composer
 
 FROM alpine:3.12.0 as builder
 
@@ -70,6 +70,7 @@ ARG HUMHUB_VERSION
 RUN apk add --no-cache \
     curl \
     ca-certificates \
+    imagemagick \
     tzdata \
     php7 \
     php7-fpm \
@@ -79,6 +80,7 @@ RUN apk add --no-cache \
     php7-json \
     php7-phar \
     php7-iconv \
+    php7-imagick \
     php7-openssl \
     php7-curl \
     php7-ctype \
@@ -113,6 +115,7 @@ ENV PHP_POST_MAX_SIZE=16M
 ENV PHP_UPLOAD_MAX_FILESIZE=10M
 ENV PHP_MAX_EXECUTION_TIME=60
 ENV PHP_MEMORY_LIMIT=1G
+ENV PHP_TIMEZONE=UTC
 
 RUN chown -R nginx:nginx /var/lib/nginx/ && \
     touch /var/run/supervisor.sock && \
