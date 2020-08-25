@@ -45,7 +45,7 @@ RUN apk add --no-cache \
     php7-fileinfo
 
 RUN composer require worteks/humhub-auth-oidc && \
-    composer update && \
+    composer update worteks/humhub-auth-oidc && \
     composer install --no-ansi --no-dev --no-interaction --no-scripts --optimize-autoloader && \
     chmod +x protected/yii && \
     chmod +x protected/yii.bat
