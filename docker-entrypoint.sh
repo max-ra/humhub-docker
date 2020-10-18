@@ -12,6 +12,10 @@ HUMHUB_EMAIL=${HUMHUB_EMAIL:-"humhub@example.com"}
 HUMHUB_LANG=${HUMHUB_LANG:-"en-US"}
 HUMHUB_DEBUG=${HUMHUB_DEBUG:-"false"}
 
+HUMHUB_ADMIN_LOGIN=${HUMHUB_ADMIN_LOGIN:-"admin"}
+HUMHUB_ADMIN_EMAIL=${HUMHUB_ADMIN_EMAIL:-${HUMHUB_EMAIL}}
+HUMHUB_ADMIN_PASSWORD=${HUMHUB_ADMIN_PASSWORD:-"test"}
+
 HUMHUB_CACHE_CLASS=${HUMHUB_CACHE_CLASS:-"yii\caching\FileCache"}
 HUMHUB_CACHE_EXPIRE_TIME=${HUMHUB_CACHE_EXPIRE_TIME:-3600}
 
@@ -33,6 +37,8 @@ HUMHUB_LDAP_USERNAME_ATTRIBUTE=${HUMHUB_LDAP_USERNAME_ATTRIBUTE}
 HUMHUB_LDAP_EMAIL_ATTRIBUTE=${HUMHUB_LDAP_EMAIL_ATTRIBUTE}
 HUMHUB_LDAP_ID_ATTRIBUTE=${HUMHUB_LDAP_ID_ATTRIBUTE}
 HUMHUB_LDAP_REFRESH_USERS=${HUMHUB_LDAP_REFRESH_USERS:-1}
+HUMHUB_LDAP_CACERT=${HUMHUB_LDAP_CACERT:""}
+HUMHUB_LDAP_SKIP_VERIFY=${HUMHUB_LDAP_SKIP_VERIFY:-0}
 
 # Mailer Config
 HUMHUB_MAILER_SYSTEM_EMAIL_ADDRESS=${HUMHUB_MAILER_SYSTEM_EMAIL_ADDRESS:-"noreply@example.com"}
@@ -49,11 +55,11 @@ export NGINX_CLIENT_MAX_BODY_SIZE=${NGINX_CLIENT_MAX_BODY_SIZE:-10m}
 export NGINX_KEEPALIVE_TIMEOUT=${NGINX_KEEPALIVE_TIMEOUT:-65}
 
 wait_for_db() {
-	if [ "$WAIT_FOR_DB" == "false" ]; then
+	if [ "$WAIT_FOR_DB" = "false" ]; then
 		return 0
 	fi
 
-	until nc -z -v -w60 $HUMHUB_DB_HOST 3306; do
+	until nc -z -v -w60 "$HUMHUB_DB_HOST" 3306; do
 		echo "Waiting for database connection..."
 		# wait for 5 seconds before check again
 		sleep 5
@@ -61,6 +67,7 @@ wait_for_db() {
 }
 
 echo "=="
+
 if [ -f "/var/www/localhost/htdocs/protected/config/dynamic.php" ]; then
 	echo "Existing installation found!"
 
@@ -68,8 +75,8 @@ if [ -f "/var/www/localhost/htdocs/protected/config/dynamic.php" ]; then
 
 	INSTALL_VERSION=$(cat /var/www/localhost/htdocs/protected/config/.version)
 	SOURCE_VERSION=$(cat /usr/src/humhub/.version)
-	cd /var/www/localhost/htdocs/protected/
-	if [[ $INSTALL_VERSION != $SOURCE_VERSION ]]; then
+	cd /var/www/localhost/htdocs/protected/ || exit 1
+	if [ "$INSTALL_VERSION" != "$SOURCE_VERSION" ]; then
 		echo "Updating from version $INSTALL_VERSION to $SOURCE_VERSION"
 		php yii migrate/up --includeModuleMigrations=1 --interactive=0
                 php yii search/rebuild
@@ -80,6 +87,24 @@ else
 	echo "Installing source files..."
 	cp -rv /usr/src/humhub/protected/config/* /var/www/localhost/htdocs/protected/config/
 	cp -v /usr/src/humhub/.version /var/www/localhost/htdocs/protected/config/.version
+
+	if [ ! -f "/var/www/localhost/htdocs/protected/config/common.php" ]; then
+		echo "Generate config using common factory..."
+
+		echo '<?php return ' \
+			>/var/www/localhost/htdocs/protected/config/common.php
+
+		sh -c "php /var/www/localhost/htdocs/protected/config/common-factory.php" \
+			>>/var/www/localhost/htdocs/protected/config/common.php
+
+		echo ';' \
+			>>/var/www/localhost/htdocs/protected/config/common.php
+	fi
+
+	if ! php -l /var/www/localhost/htdocs/protected/config/common.php; then
+		echo "Humhub common config is not valid! Fix errors before restarting."
+		exit 1
+	fi
 
 	mkdir -p /var/www/localhost/htdocs/protected/runtime/logs/
 	touch /var/www/localhost/htdocs/protected/runtime/logs/app.log
@@ -93,7 +118,7 @@ else
 	wait_for_db
 
 	echo "Creating database..."
-	cd /var/www/localhost/htdocs/protected/
+	cd /var/www/localhost/htdocs/protected/ || exit 1
 	if [ -z "$HUMHUB_DB_USER" ]; then
 		AUTOINSTALL="false"
 	fi
@@ -109,7 +134,7 @@ else
 			echo "Setting base url to: $HUMHUB_BASE_URL"
 			php yii installer/set-base-url "${HUMHUB_BASE_URL}"
 		fi
-		php yii installer/create-admin-account
+		php yii installer/create-admin-account "${HUMHUB_ADMIN_LOGIN}" "${HUMHUB_ADMIN_EMAIL}" "${HUMHUB_ADMIN_PASSWORD}"
 
 		php yii 'settings/set' 'base' 'cache.class' "${HUMHUB_CACHE_CLASS}"
 		php yii 'settings/set' 'base' 'cache.expireTime' "${HUMHUB_CACHE_EXPIRE_TIME}"
@@ -135,6 +160,17 @@ else
 			php yii 'settings/set' 'ldap' 'refreshUsers' "${HUMHUB_LDAP_REFRESH_USERS}"
 		fi
 
+		if [ "$HUMHUB_LDAP_SKIP_VERIFY" != "0" ]; then
+			echo "Setting LDAP TLS SKIP VERIFY"
+			echo "TLS_REQCERT ALLOW" >> /etc/openldap/ldap.conf
+		fi
+
+		if [ "$HUMHUB_LDAP_CACERT" != "" ]; then
+			echo "Setting LDAP CACERT"
+			echo "$HUMHUB_LDAP_CACERT" > /etc/ssl/certs/cacert.crt
+			echo "TLS_CACERT  /etc/ssl/certs/cacert.crt" >> /etc/openldap/ldap.conf
+		fi
+		
 		php yii 'settings/set' 'base' 'mailer.systemEmailAddress' "${HUMHUB_MAILER_SYSTEM_EMAIL_ADDRESS}"
 		php yii 'settings/set' 'base' 'mailer.systemEmailName' "${HUMHUB_MAILER_SYSTEM_EMAIL_NAME}"
 		if [ "$HUMHUB_MAILER_TRANSPORT_TYPE" != "php" ]; then
@@ -159,8 +195,10 @@ if test -e /var/www/localhost/htdocs/protected/config/dynamic.php &&
 	grep "'installed' => true" /var/www/localhost/htdocs/protected/config/dynamic.php -q; then
 	echo "installation active"
 
-	if [ $SET_PJAX != "false" ]; then
-		sed -i -e "s/'enablePjax' => false/'enablePjax' => true/g" /var/www/localhost/htdocs/protected/config/common.php
+	if [ "$SET_PJAX" != "false" ]; then
+		sed -i \
+			-e "s/'enablePjax' => false/'enablePjax' => true/g" \
+			/var/www/localhost/htdocs/protected/config/common.php
 	fi
 
 	if [ -n "$HUMHUB_TRUSTED_HOSTS" ]; then
@@ -173,7 +211,7 @@ else
 	INTEGRITY_CHECK="false"
 fi
 
-if [ "$HUMHUB_DEBUG" == "false" ]; then
+if [ "$HUMHUB_DEBUG" = "false" ]; then
 	sed -i '/YII_DEBUG/s/^\/*/\/\//' /var/www/localhost/htdocs/index.php
 	sed -i '/YII_ENV/s/^\/*/\/\//' /var/www/localhost/htdocs/index.php
 	echo "debug disabled"
@@ -185,8 +223,7 @@ fi
 
 if [ "$INTEGRITY_CHECK" != "false" ]; then
 	echo "validating ..."
-	php ./yii integrity/run
-	if [ $? -ne 0 ]; then
+	if ! php ./yii integrity/run; then
 		echo "validation failed!"
 		exit 1
 	fi
@@ -198,8 +235,10 @@ php yii search/rebuild
 chown -R nginx:nginx runtime/searchdb/
 
 echo "Writing Nginx Config"
-envsubst "\$NGINX_CLIENT_MAX_BODY_SIZE,\$NGINX_KEEPALIVE_TIMEOUT" < /etc/nginx/nginx.conf > /tmp/nginx.conf
-cat /tmp/nginx.conf > /etc/nginx/nginx.conf
+
+# shellcheck disable=SC2016
+envsubst '$NGINX_CLIENT_MAX_BODY_SIZE,$NGINX_KEEPALIVE_TIMEOUT' </etc/nginx/nginx.conf >/tmp/nginx.conf
+cat /tmp/nginx.conf >/etc/nginx/nginx.conf
 rm /tmp/nginx.conf
 
 echo "=="

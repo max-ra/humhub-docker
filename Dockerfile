@@ -1,6 +1,6 @@
 ARG HUMHUB_VERSION=1.6.2
 
-FROM composer:1.10.10 as builder-composer
+FROM composer:1.10.13 as builder-composer
 
 FROM alpine:3.12.0 as builder
 
@@ -80,7 +80,7 @@ RUN apk add --no-cache \
     php7-json \
     php7-phar \
     php7-iconv \
-    php7-imagick \
+    php7-pecl-imagick \
     php7-openssl \
     php7-curl \
     php7-ctype \
@@ -126,6 +126,7 @@ COPY --chown=nginx:nginx humhub/ /var/www/localhost/htdocs/
 
 RUN mkdir -p /usr/src/humhub/protected/config/ && \
     cp -R /var/www/localhost/htdocs/protected/config/* /usr/src/humhub/protected/config/ && \
+    rm -f var/www/localhost/htdocs/protected/config/common.php /usr/src/humhub/protected/config/common.php && \
     echo "v${HUMHUB_VERSION}" >  /usr/src/humhub/.version
 
 COPY etc/ /etc/
