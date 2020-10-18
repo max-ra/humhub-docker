@@ -1,8 +1,8 @@
-ARG HUMHUB_VERSION=1.3.17
+ARG HUMHUB_VERSION=1.6.2
 
-FROM composer:1.8.6 as builder-composer
+FROM composer:1.10.13 as builder-composer
 
-FROM alpine:3.10 as builder
+FROM alpine:3.12.0 as builder
 
 ARG HUMHUB_VERSION
 
@@ -40,6 +40,8 @@ RUN apk add --no-cache \
     php7-xmlreader \
     php7-xmlwriter \
     php7-zip \
+    php7-tokenizer \
+    php7-exif \
     php7-fileinfo
 
 RUN composer install --no-ansi --no-dev --no-interaction --no-progress --no-scripts --optimize-autoloader && \
@@ -59,13 +61,14 @@ RUN grunt build-assets
 
 RUN rm -rf ./node_modules
 
-FROM alpine:3.8
+FROM alpine:3.12.0
 
 ARG HUMHUB_VERSION
 
 RUN apk add --no-cache \
     curl \
     ca-certificates \
+    imagemagick \
     tzdata \
     php7 \
     php7-fpm \
@@ -75,6 +78,7 @@ RUN apk add --no-cache \
     php7-json \
     php7-phar \
     php7-iconv \
+    php7-pecl-imagick \
     php7-openssl \
     php7-curl \
     php7-ctype \
@@ -108,6 +112,7 @@ ENV PHP_POST_MAX_SIZE=16M
 ENV PHP_UPLOAD_MAX_FILESIZE=10M
 ENV PHP_MAX_EXECUTION_TIME=60
 ENV PHP_MEMORY_LIMIT=1G
+ENV PHP_TIMEZONE=UTC
 
 RUN chown -R nginx:nginx /var/lib/nginx/ && \
     touch /var/run/supervisor.sock && \
@@ -118,6 +123,7 @@ COPY --chown=nginx:nginx humhub/ /var/www/localhost/htdocs/
 
 RUN mkdir -p /usr/src/humhub/protected/config/ && \
     cp -R /var/www/localhost/htdocs/protected/config/* /usr/src/humhub/protected/config/ && \
+    rm -f var/www/localhost/htdocs/protected/config/common.php /usr/src/humhub/protected/config/common.php && \
     echo "v${HUMHUB_VERSION}" >  /usr/src/humhub/.version
 
 COPY etc/ /etc/
