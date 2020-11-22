@@ -1,8 +1,9 @@
-ARG HUMHUB_VERSION=1.6.2
+ARG HUMHUB_VERSION
+ARG VCS_REF
 
 FROM composer:1.10.13 as builder-composer
 
-FROM alpine:3.12.0 as builder
+FROM alpine:3.12.1 as builder
 
 ARG HUMHUB_VERSION
 
@@ -61,9 +62,19 @@ RUN grunt build-assets
 
 RUN rm -rf ./node_modules
 
-FROM alpine:3.12.0
+FROM alpine:3.12.1 as base
 
 ARG HUMHUB_VERSION
+LABEL name="HumHub" version=${HUMHUB_VERSION} variant="base" \
+      org.label-schema.build-date=$BUILD_DATE \
+      org.label-schema.name="HumHub" \
+      org.label-schema.description="HumHub is a feature rich and highly flexible OpenSource Social Network Kit written in PHP" \
+      org.label-schema.url="https://www.humhub.com/" \
+      org.label-schema.vcs-ref=$VCS_REF \
+      org.label-schema.vcs-url="https://github.com/mriedmann/humhub-docker" \
+      org.label-schema.vendor="HumHub GmbH" \
+      org.label-schema.version=${HUMHUB_VERSION} \
+      org.label-schema.schema-version="1.0"
 
 RUN apk add --no-cache \
     curl \
@@ -96,7 +107,6 @@ RUN apk add --no-cache \
     php7-fileinfo \
     php7-session \
     supervisor \
-    nginx \
     sqlite \
     && rm -rf /var/cache/apk/*
 
@@ -114,29 +124,66 @@ ENV PHP_MAX_EXECUTION_TIME=60
 ENV PHP_MEMORY_LIMIT=1G
 ENV PHP_TIMEZONE=UTC
 
-RUN chown -R nginx:nginx /var/lib/nginx/ && \
-    touch /var/run/supervisor.sock && \
+RUN touch /var/run/supervisor.sock && \
     chmod 777 /var/run/supervisor.sock
 
-COPY --from=builder --chown=nginx:nginx /usr/src/humhub /var/www/localhost/htdocs/
-COPY --chown=nginx:nginx humhub/ /var/www/localhost/htdocs/
+# 100=nginx 101=nginx (group)
+COPY --from=builder --chown=100:101 /usr/src/humhub /var/www/localhost/htdocs/
+COPY --chown=100:101 humhub/ /var/www/localhost/htdocs/
 
 RUN mkdir -p /usr/src/humhub/protected/config/ && \
     cp -R /var/www/localhost/htdocs/protected/config/* /usr/src/humhub/protected/config/ && \
     rm -f var/www/localhost/htdocs/protected/config/common.php /usr/src/humhub/protected/config/common.php && \
     echo "v${HUMHUB_VERSION}" >  /usr/src/humhub/.version
 
-COPY etc/ /etc/
-COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+COPY base/ /
+COPY docker-entrypoint.sh /docker-entrypoint.sh
 
 RUN chmod 600 /etc/crontabs/nginx && \
-    chmod +x /usr/local/bin/docker-entrypoint.sh
+    chmod +x /docker-entrypoint.sh
 
 VOLUME /var/www/localhost/htdocs/uploads
 VOLUME /var/www/localhost/htdocs/protected/config
 VOLUME /var/www/localhost/htdocs/protected/modules
 
-EXPOSE 80
-
-ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
+ENTRYPOINT ["/docker-entrypoint.sh"]
 CMD ["supervisord", "-n", "-c", "/etc/supervisord.conf"]
+
+FROM base as humhub_phponly
+
+LABEL variant="phponly"
+
+RUN apk add --no-cache fcgi
+
+COPY phponly/ /
+
+RUN wget -O /usr/local/bin/php-fpm-healthcheck \
+ https://raw.githubusercontent.com/renatomefi/php-fpm-healthcheck/master/php-fpm-healthcheck \
+ && chmod +x /usr/local/bin/php-fpm-healthcheck \
+ && addgroup -g 101 -S nginx \
+ && adduser --uid 100 -g 101 -S nginx
+
+EXPOSE 9000
+
+FROM nginx:stable-alpine as humhub_nginx
+
+LABEL variant="nginx"
+
+ENV NGINX_CLIENT_MAX_BODY_SIZE=10m \
+    NGINX_KEEPALIVE_TIMEOUT=65 \
+    NGINX_UPSTREAM=humhub:9000
+
+COPY nginx/ /
+COPY --from=builder --chown=nginx:nginx /usr/src/humhub/ /var/www/localhost/htdocs/
+
+FROM base as humhub_allinone
+
+LABEL variant="allinone"
+
+RUN apk add --no-cache nginx
+
+RUN chown -R nginx:nginx /var/lib/nginx/
+
+COPY nginx/ /
+
+EXPOSE 80
