@@ -62,6 +62,10 @@ RUN apk add --no-cache \
     php7-pdo_mysql
 RUN grunt build-assets
 
+#build custom theme
+COPY themes/mfr /usr/src/humhub/themes/mfr/
+RUN grunt build-theme --name=mfr
+
 RUN rm -rf ./node_modules
 
 FROM alpine:3.12.3 as base

@@ -19,6 +19,7 @@ $this->pageTitle = Yii::t('UserModule.auth', 'Login');
 <div class="container" style="text-align: center;">
     <?= SiteLogo::widget(['place' => 'login']); ?>
     <br>
+
     <div class="panel panel-default animated bounceIn" id="login-form"
          style="max-width: 300px; margin: 0 auto 20px; text-align: left;">
 
@@ -35,7 +36,11 @@ $this->pageTitle = Yii::t('UserModule.auth', 'Login');
             <?php if (AuthChoice::hasClients()): ?>
                 <?= AuthChoice::widget([]) ?>
             <?php else: ?>
-	        <!-- TODO: Throw error Auth client not avilable -->
+                <?php if ($canRegister) : ?>
+                    <p><?= Yii::t('UserModule.auth', "If you're already a member, please login with your username/email and password."); ?></p>
+                <?php else: ?>
+                    <p><?= Yii::t('UserModule.auth', "Please login with your username/email and password."); ?></p>
+                <?php endif; ?>
             <?php endif; ?>
 
         </div>
@@ -43,10 +48,16 @@ $this->pageTitle = Yii::t('UserModule.auth', 'Login');
 
     <br>
 
+
     <?= humhub\widgets\LanguageChooser::widget(); ?>
 </div>
 
 <script <?= Html::nonce() ?>>
+    $(function () {
+        // set cursor to login field
+        $('#login_username').focus();
+    });
+
     // Shake panel after wrong validation
     <?php if ($model->hasErrors()) { ?>
     $('#login-form').removeClass('bounceIn');
@@ -61,6 +72,12 @@ $this->pageTitle = Yii::t('UserModule.auth', 'Login');
     $('#register-form').addClass('shake');
     $('#login-form').removeClass('bounceIn');
     $('#app-title').removeClass('fadeIn');
+    <?php } ?>
+
+    <?php if ($invite->showCaptureInRegisterForm()) { ?>
+    $('#register-email').on('focus', function () {
+        $('#registration-form-captcha').fadeIn(500);
+    });
     <?php } ?>
 
 </script>
