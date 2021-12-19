@@ -64,9 +64,9 @@ ARG RUNTIME_DEPS="\
     tzdata \
     "
 
-FROM composer:2.1.9 as builder-composer
+FROM composer:2.1.14 as builder-composer
 
-FROM docker.io/library/alpine:3.14.2 as builder
+FROM docker.io/library/alpine:3.15.0 as builder
 
 ARG HUMHUB_VERSION
 ARG BUILD_DEPS
@@ -99,7 +99,7 @@ RUN composer require worteks/humhub-auth-oidc && \
     grunt build-theme --name=mfr && \
     rm -rf ./node_modules
 
-FROM docker.io/library/alpine:3.14.2 as base
+FROM docker.io/library/alpine:3.15.0 as base
 
 ARG HUMHUB_VERSION
 ARG RUNTIME_DEPS
@@ -166,7 +166,7 @@ RUN chmod +x /usr/local/bin/php-fpm-healthcheck \
 
 EXPOSE 9000
 
-FROM docker.io/library/nginx:1.21.3-alpine as humhub_nginx
+FROM docker.io/library/nginx:1.21.4-alpine as humhub_nginx
 
 LABEL variant="nginx"
 
