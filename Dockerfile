@@ -63,7 +63,7 @@ ARG RUNTIME_DEPS="\
     tzdata \
     "
 
-FROM composer:2.3.7 as builder-composer
+FROM composer:2.3.10 as builder-composer
 
 FROM docker.io/library/alpine:3.15.4 as builder
 
@@ -84,7 +84,8 @@ RUN tar xzf v${HUMHUB_VERSION}.tar.gz && \
     
 WORKDIR /usr/src/humhub
 
-RUN composer install --no-ansi --no-dev --no-interaction --no-progress --no-scripts --optimize-autoloader && \
+RUN composer config --no-plugins allow-plugins.yiisoft/yii2-composer true && \
+    composer install --no-ansi --no-dev --no-interaction --no-progress --no-scripts --optimize-autoloader && \
     chmod +x protected/yii && \
     chmod +x protected/yii.bat && \
     npm install grunt && \
@@ -159,7 +160,7 @@ RUN chmod +x /usr/local/bin/php-fpm-healthcheck \
 
 EXPOSE 9000
 
-FROM docker.io/library/nginx:1.21.6-alpine as humhub_nginx
+FROM docker.io/library/nginx:1.23.0-alpine as humhub_nginx
 
 LABEL variant="nginx"
 
