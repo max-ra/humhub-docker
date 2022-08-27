@@ -13,7 +13,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        version: ["1.10", "1.9", "1.8"]
+        version: ["1.11", "1.10", "1.9"]
     steps:
     - uses: actions/checkout@v2
     - uses: FranzDiebold/github-env-vars-action@v1.2.1
@@ -27,6 +27,7 @@ jobs:
         docker build \
           --build-arg HUMHUB_VERSION="${HUMHUB_VERSION}" \
           --build-arg VCS_REF="$(git rev-parse --short HEAD)" \
+          --build-arg BUILD_DATE="$(date -u +'%Y-%m-%dT%H:%M:%SZ')" \
           --target base \
           -t "ghcr.io/${GITHUB_REPOSITORY_OWNER}/humhub:${GITHUB_REF_NAME_SLUG}-${HUMHUB_VERSION}-base" \
           .
@@ -42,7 +43,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        version: ["1.10", "1.9", "1.8"]
+        version: ["1.11", "1.10", "1.9"]
         target: ["allinone", "nginx", "phponly"]
     steps:
     - uses: actions/checkout@v2
@@ -77,7 +78,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        version: ["1.10", "1.9", "1.8"]
+        version: ["1.11", "1.10", "1.9"]
     steps:
     - uses: actions/checkout@v2
     - uses: FranzDiebold/github-env-vars-action@v1.2.1
@@ -111,7 +112,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        version: ["1.10", "1.9", "1.8"]
+        version: ["1.11", "1.10", "1.9"]
     steps:
     - uses: actions/checkout@v2
     - uses: FranzDiebold/github-env-vars-action@v1.2.1
@@ -153,7 +154,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        version: ["1.10", "1.9", "1.8"]
+        version: ["1.11", "1.10", "1.9"]
         target: ["allinone", "nginx", "phponly"]
     steps:
     - uses: actions/checkout@v2
