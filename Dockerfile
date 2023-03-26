@@ -64,7 +64,7 @@ ARG RUNTIME_DEPS="\
     tzdata \
     "
 
-FROM composer:2.4.4 as builder-composer
+FROM composer:2.5.1 as builder-composer
 
 FROM docker.io/library/alpine:3.15.4 as builder
 
@@ -167,7 +167,7 @@ RUN chmod +x /usr/local/bin/php-fpm-healthcheck \
 
 EXPOSE 9000
 
-FROM docker.io/library/nginx:1.23.0-alpine as humhub_nginx
+FROM docker.io/library/nginx:1.23.3-alpine as humhub_nginx
 
 LABEL variant="nginx"
 
