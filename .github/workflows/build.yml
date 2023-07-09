@@ -13,13 +13,13 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        version: ["1.13", "1.12", "1.11"]
+        version: ["latest", "stable", "legacy"]
     steps:
     - uses: actions/checkout@v2
     - uses: FranzDiebold/github-env-vars-action@v1.2.1
     - name: Set Humhub version
       run: |
-        HUMHUB_VERSION="$(awk -e '$0 ~ /^([0-9\.]+) ${{ matrix.version }}/ {print $1}' versions.txt)"
+        HUMHUB_VERSION="$(awk -e '$0 ~ /^([0-9\.]+) [0-9\.]+ ${{ matrix.version }}/ {print $1}' versions.txt)"
         export HUMHUB_VERSION
         echo "HUMHUB_VERSION=$HUMHUB_VERSION" >> "$GITHUB_ENV"
     - name: Build and push docker image
@@ -43,14 +43,14 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        version: ["1.13", "1.12", "1.11"]
+        version: ["latest", "stable", "legacy"]
         target: ["allinone", "nginx", "phponly"]
     steps:
     - uses: actions/checkout@v2
     - uses: FranzDiebold/github-env-vars-action@v1.2.1
     - name: Set Humhub version
       run: |
-        HUMHUB_VERSION=$(awk -e '$0 ~ /^([0-9\.]+) ${{ matrix.version }}/ {print $1}' versions.txt)
+        HUMHUB_VERSION=$(awk -e '$0 ~ /^([0-9\.]+) [0-9\.]+ ${{ matrix.version }}/ {print $1}' versions.txt)
         export HUMHUB_VERSION
         echo "HUMHUB_VERSION=$HUMHUB_VERSION" >> "$GITHUB_ENV"
     - name: Download image archive
@@ -78,13 +78,13 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        version: ["1.13", "1.12", "1.11"]
+        version: ["latest", "stable", "legacy"]
     steps:
     - uses: actions/checkout@v2
     - uses: FranzDiebold/github-env-vars-action@v1.2.1
     - name: Set Humhub version
       run: |
-        HUMHUB_VERSION=$(awk -e '$0 ~ /^([0-9\.]+) ${{ matrix.version }}/ {print $1}' versions.txt)
+        HUMHUB_VERSION=$(awk -e '$0 ~ /^([0-9\.]+) [0-9\.]+ ${{ matrix.version }}/ {print $1}' versions.txt)
         export HUMHUB_VERSION
         echo "HUMHUB_VERSION=$HUMHUB_VERSION" >> "$GITHUB_ENV"
     - name: Download image archive
@@ -102,8 +102,10 @@ jobs:
       run: sleep 60
     - name: Check status
       run: docker ps -a
+    - name: Logs
+      run: docker-compose logs
     - name: Test
-      run: curl http://localhost:8080/ -L --fail -s | grep 'Sign in</button>' -q
+      run: curl http://localhost:8080/ -L --fail && curl http://localhost:8080/ -L --fail -s | grep 'Sign in</button>' -q
     - name: Test Email
       run: docker-compose exec -T humhub php /var/www/localhost/htdocs/protected/yii test/email 'test@example.com' | grep 'Message successfully sent!' -q
   test_prod:
@@ -112,13 +114,13 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        version: ["1.13", "1.12", "1.11"]
+        version: ["latest", "stable", "legacy"]
     steps:
     - uses: actions/checkout@v2
     - uses: FranzDiebold/github-env-vars-action@v1.2.1
     - name: Set Humhub version
       run: |
-        HUMHUB_VERSION=$(awk -e '$0 ~ /^([0-9\.]+) ${{ matrix.version }}/ {print $1}' versions.txt)
+        HUMHUB_VERSION=$(awk -e '$0 ~ /^([0-9\.]+) [0-9\.]+ ${{ matrix.version }}/ {print $1}' versions.txt)
         export HUMHUB_VERSION
         echo "HUMHUB_VERSION=$HUMHUB_VERSION" >> "$GITHUB_ENV"
     - name: Download image archive (phponly)
@@ -143,8 +145,10 @@ jobs:
       run: sleep 60
     - name: Check status
       run: docker ps -a
+    - name: Logs
+      run: docker-compose logs
     - name: Test
-      run: curl http://localhost:8080/ -L --fail -s | grep 'Sign in</button>' -q
+      run: curl http://localhost:8080/ -L --fail && curl http://localhost:8080/ -L --fail -s | grep 'Sign in</button>' -q
     - name: Test Email
       run: docker-compose exec -T humhub php /var/www/localhost/htdocs/protected/yii test/email 'test@example.com' | grep 'Message successfully sent!' -q
   push_ghcr:
@@ -154,7 +158,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        version: ["1.13", "1.12", "1.11"]
+        version: ["latest", "stable", "legacy"]
         target: ["allinone", "nginx", "phponly"]
     steps:
     - uses: actions/checkout@v2
@@ -163,7 +167,7 @@ jobs:
       run: echo "${{ secrets.PAT }}" | docker login ghcr.io --username "${GITHUB_REPOSITORY_OWNER}" --password-stdin
     - name: Set Humhub version
       run: |
-        HUMHUB_VERSION=$(awk -e '$0 ~ /^([0-9\.]+) ${{ matrix.version }}/ {print $1}' versions.txt)
+        HUMHUB_VERSION=$(awk -e '$0 ~ /^([0-9\.]+) [0-9\.]+ ${{ matrix.version }}/ {print $1}' versions.txt)
         export HUMHUB_VERSION
         echo "HUMHUB_VERSION=$HUMHUB_VERSION" >> "$GITHUB_ENV"
     - name: Download image archive
