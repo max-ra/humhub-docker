@@ -60,7 +60,7 @@ ARG RUNTIME_DEPS="\
     php81-xmlwriter \
     php81-zip \
     sqlite \
-    php7-tokenizer \
+    php81-tokenizer \
     supervisor \
     tzdata \
     "
