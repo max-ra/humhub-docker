@@ -25,6 +25,7 @@ ARG BUILD_DEPS="\
     php81-xmlreader \
     php81-xmlwriter \
     php81-zip \
+    php81-gmp \ 
     composer \
     tzdata \
     "
@@ -59,6 +60,7 @@ ARG RUNTIME_DEPS="\
     php81-xmlreader \
     php81-xmlwriter \
     php81-zip \
+    php81-gmp \
     sqlite \
     php81-tokenizer \
     supervisor \
