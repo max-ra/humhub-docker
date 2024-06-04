@@ -36,6 +36,7 @@ ARG RUNTIME_DEPS="\
     libintl \
     php81 \
     php81-apcu \
+    php81-bcmath \
     php81-ctype \
     php81-curl \
     php81-dom \
@@ -43,6 +44,7 @@ ARG RUNTIME_DEPS="\
     php81-fileinfo \
     php81-fpm \
     php81-gd \
+    php81-gmp \
     php81-iconv \
     php81-intl \
     php81-json \
@@ -156,7 +158,7 @@ RUN chmod +x /usr/local/bin/php-fpm-healthcheck \
 
 EXPOSE 9000
 
-FROM docker.io/library/nginx:1.25.3-alpine as humhub_nginx
+FROM docker.io/library/nginx:1.25.4-alpine as humhub_nginx
 
 LABEL variant="nginx"
 
