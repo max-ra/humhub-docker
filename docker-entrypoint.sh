@@ -92,11 +92,6 @@ if [ -f "/var/www/localhost/htdocs/protected/config/dynamic.php" ]; then
 
 	wait_for_db
 
-	echo >&3 "Reset permission for runtime"
-	mkdir /var/www/localhost/htdocs/protected/runtime/logs
-	touch /var/www/localhost/htdocs/protected/runtime/logs/app.log
-	chown -R nginx:nginx /var/www/localhost/htdocs/protected/runtime
-
 	INSTALL_VERSION=$(cat /var/www/localhost/htdocs/protected/config/.version)
 	SOURCE_VERSION=$(cat /usr/src/humhub/.version)
 	cd /var/www/localhost/htdocs/protected/ || exit 1
